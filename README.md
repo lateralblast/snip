@@ -13,9 +13,9 @@ Processes a Service Now XLSX CMDB extract
 License
 -------
 
-This software is licensed as CC-BA (Creative Commons By Attrbution)
+This software is licensed as CC BY-NC-SA (Creative Commons Attribution-NonCommercial-ShareAlike 4.0)
 
-http://creativecommons.org/licenses/by/4.0/legalcode
+https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode
 
 Usage
 -----
@@ -46,3 +46,11 @@ Perl Modules:
 - use Spreadsheet::XLSX
 - Getopt::Std
 - Text::Iconv
+
+
+Help Support Development
+------------------------
+
+If you find this software useful and would like to support its development, please consider buying me a coffee:
+
+https://ko-fi.com/richardatlateralblast
