@@ -4,6 +4,14 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.5] - 2026-10-03
+
+### Changed
+- Module loading in the `BEGIN` block uses `require` on a file path instead of string `eval`, and reports a failed `cpan` run.
+- Column positions are named constants instead of magic numbers.
+- Missing input is checked with `-f`, and a failure to parse the workbook is reported instead of dying later.
+- Argument handling is simplified (`!@ARGV`), and `-i` is tested with `defined`.
+
 ## [0.1.4] - 2026-10-03
 
 ### Fixed

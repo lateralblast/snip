@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 # Name:         snip.pl
-# Version:      0.1.4
+# Version:      0.1.5
 # Release:      1
 # License:      CC BY-NC-SA (Creative Commons Attribution-NonCommercial-ShareAlike)
 #               https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode
@@ -24,23 +24,24 @@ BEGIN {
   my $local_lib = "$ENV{HOME}/perl5";
   my @modules   = ("Spreadsheet::XLSX","Getopt::Std","Text::Iconv");
   my @missing;
+  my $load      = sub {
+    (my $file = "$_[0].pm") =~ s{::}{/}g;
+    return eval { require $file; 1 };
+  };
   lib->import("$local_lib/lib/perl5");
   foreach my $module (@modules) {
-    if (!eval "require $module; 1") {
-      push(@missing,$module);
-    }
+    push(@missing,$module) if !$load->($module);
   }
   if (@missing) {
     print STDERR "Installing missing Perl modules: @missing\n";
     local $ENV{'PERL_MM_OPT'}         = "INSTALL_BASE=$local_lib";
     local $ENV{'PERL_MB_OPT'}         = "--install_base $local_lib";
     local $ENV{'PERL_MM_USE_DEFAULT'} = 1;
-    system("cpan","-T",@missing);
+    system("cpan","-T",@missing) == 0
+      or warn "cpan exited with a non-zero status\n";
     lib->import("$local_lib/lib/perl5");
     foreach my $module (@missing) {
-      if (!eval "require $module; 1") {
-        die "Failed to install Perl module $module\n";
-      }
+      $load->($module) or die "Failed to install Perl module $module\n";
     }
   }
 }
@@ -49,6 +50,20 @@ use Spreadsheet::XLSX;
 use Getopt::Std;
 use Text::Iconv;
 
+# Fixed column positions in the CMDB extract
+
+use constant {
+  COL_NAME        => 0,
+  COL_DESCRIPTION => 2,
+  COL_LOCATION    => 4,
+  COL_OS_REVISION => 5,
+  COL_OS_VERSION  => 6,
+  COL_OS_DOMAIN   => 8,
+  COL_OS_NAME     => 9,
+  COL_STATUS      => 10,
+  COL_COUNT       => 11,
+};
+
 my $script_name    = $0;
 my $script_version = get_version();
 my $options        = "chVi:";
@@ -56,20 +71,14 @@ my %option;
 my @cmdb_data;
 my $cmdb_file      = "cmdb.xlsx";
 
-if ($#ARGV == -1) {
+if (!@ARGV || !getopts($options,\%option)) {
   print_usage();
   exit 1;
-}
-else {
-  if (!getopts($options,\%option)) {
-    print_usage();
-    exit 1;
-  }
 }
 
 # If given -i set input file to file given
 
-if ($option{'i'}) {
+if (defined $option{'i'}) {
   $cmdb_file = $option{'i'};
 }
 
@@ -141,7 +150,7 @@ sub print_version {
 # Check local environment
 
 sub check_local_env {
-  if (!-e "$cmdb_file") {
+  if (!-f $cmdb_file) {
     print STDERR "File $cmdb_file does not exist\n";
     exit 1;
   }
@@ -154,7 +163,8 @@ sub check_local_env {
 
 sub import_cmdb_data {
   my $parser = Text::Iconv->new("utf-8", "windows-1251");
-  my $excel  = Spreadsheet::XLSX->new($cmdb_file,$parser);
+  my $excel  = Spreadsheet::XLSX->new($cmdb_file,$parser)
+    or die "Failed to read $cmdb_file\n";
   foreach my $sheet (@{$excel->{Worksheet}}) {
     $sheet->{MaxRow} ||= $sheet->{MinRow};
     $sheet->{MaxCol} ||= $sheet->{MinCol};
@@ -183,16 +193,15 @@ sub import_cmdb_data {
 
 sub check_cmdb_data {
   foreach my $row (@cmdb_data) {
-    my @data = @$row;
-    $data[$_] = "" for grep { !defined($data[$_]) } 0..10;
-    my $host_name   = $data[0];
-    my $host_info   = $data[2];
-    my $loc_info    = $data[4];
-    my $os_rev      = $data[5];
-    my $os_ver      = $data[6];
-    my $os_domain   = $data[8];
-    my $os_name     = $data[9];
-    my $status      = lc($data[10]);
+    my @data = map { defined($_) ? $_ : "" } @{$row}[0..COL_COUNT-1];
+    my $host_name   = $data[COL_NAME];
+    my $host_info   = $data[COL_DESCRIPTION];
+    my $loc_info    = $data[COL_LOCATION];
+    my $os_rev      = $data[COL_OS_REVISION];
+    my $os_ver      = $data[COL_OS_VERSION];
+    my $os_domain   = $data[COL_OS_DOMAIN];
+    my $os_name     = $data[COL_OS_NAME];
+    my $status      = lc($data[COL_STATUS]);
     if ($host_name =~ /\s+-/) {
       ($host_name) = split(/\s+-/,$host_name);
       print "$host_name contains a description in the Hostname field\n";

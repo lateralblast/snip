@@ -28,6 +28,11 @@ For each host, the following are reported if found:
 - No OS revision (service pack)
 - No operational status (operational / decom)
 
+Version
+-------
+
+Current version: 0.1.5
+
 Requirements
 ------------
 
